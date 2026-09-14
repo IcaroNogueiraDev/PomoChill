@@ -12,7 +12,11 @@ const getAllTracks = async (req: Request, res: Response) => {
     try {
         const { data: tracks, error } = await supabase.from("tracks").select("*");
 
-        if (tracks?.length === 0) {
+        if (error) {
+            return handleError(res, 500, "Failed to fetch tracks")
+        }
+
+        if (!tracks || tracks.length === 0) {
             return handleError(res, 404, "Tracks not found")
         }
 

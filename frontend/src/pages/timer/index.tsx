@@ -14,6 +14,11 @@ import {
   Sun,
 } from "lucide-react";
 import { MusicPlayer } from "./components/MusicPlayer";
+import {
+  playStartSound,
+  playPauseSound,
+  playPomodoroDoneSound,
+} from "./components/soundsPlayer.ts";
 
 function TimerUi() {
   const [fullSessions, setFullSessions] = useState(Number);
@@ -66,6 +71,7 @@ function TimerUi() {
         if (seconds > 0) {
           setSeconds(() => seconds - 1);
         } else {
+          playPomodoroDoneSound();
           clearInterval(interval);
           focusEnd();
         }
@@ -77,6 +83,9 @@ function TimerUi() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
     localStorage.setItem("pomodoro-theme", isDark ? "dark" : "light");
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", isDark ? "#0a101f" : "#f7f9fc");
   }, [isDark]);
 
   const addMinutes = () => {
@@ -93,13 +102,16 @@ function TimerUi() {
 
   const toggleTimer = () => {
     if (isActive) {
+      playPauseSound();
       return setIsActive(false);
     }
+    playStartSound();
     setIsActive(true);
   };
 
   const resetTimer = () => {
     setIsActive(false);
+    playPauseSound();
     setBreaks(mode);
   };
 
@@ -122,8 +134,8 @@ function TimerUi() {
         : "Pausa longa";
 
   return (
-    <main className="h-[100svh] bg-background text-foreground transition-colors duration-500">
-      <div className="mx-auto grid h-full max-w-7xl grid-rows-[auto_minmax(0,1fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
+    <main className="timer-shell relative h-[100svh] overflow-hidden bg-background text-foreground transition-colors duration-500">
+      <div className="relative z-10 mx-auto grid h-full max-w-7xl grid-rows-[auto_minmax(0,1fr)] gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
         <header className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <div className="min-w-0">
@@ -153,8 +165,10 @@ function TimerUi() {
         </header>
 
         <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-3 sm:gap-4 md:grid-cols-[minmax(0,1fr)_minmax(18rem,23rem)] md:grid-rows-1">
-          <Card className="timer-card relative flex min-h-0 flex-col !gap-0 !py-3 overflow-hidden border-border bg-card px-3 shadow-md sm:!py-5 sm:px-5">
-
+          <Card
+            data-active={isActive}
+            className="timer-card relative flex min-h-0 flex-col !gap-0 !py-3 overflow-hidden border-border bg-card px-3 shadow-md transition-[box-shadow,border-color] duration-500 sm:!py-5 sm:px-5"
+          >
             <div className="relative flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
@@ -164,7 +178,19 @@ function TimerUi() {
                   Sessão {fullSessions + 1} de 4
                 </p>
               </div>
-              <div className="rounded-full border border-border/70 bg-background/50 px-3 py-1 text-xs text-muted-foreground">
+              <div
+                className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition-colors ${
+                  isActive
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border/70 bg-background/50 text-muted-foreground"
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    isActive ? "animate-pulse bg-primary" : "bg-muted-foreground/50"
+                  }`}
+                />
                 {isActive ? "Em andamento" : "Em espera"}
               </div>
             </div>
@@ -237,7 +263,10 @@ function TimerUi() {
             <div className="timer-area flex min-h-0 flex-1 flex-col items-center py-2 sm:py-4">
               <div className="timer-face-wrap flex min-h-0 w-full flex-1 items-center justify-center">
                 <div className="timer-face relative">
-                  <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90">
+                  <svg
+                    viewBox="0 0 200 200"
+                    className="h-full w-full -rotate-90"
+                  >
                     <circle
                       cx="100"
                       cy="100"
@@ -251,7 +280,9 @@ function TimerUi() {
                       cy="100"
                       r="88"
                       fill="none"
-                      className="stroke-primary"
+                      className={`timer-progress stroke-primary ${
+                        isActive ? "timer-progress-active" : ""
+                      }`}
                       strokeWidth="5"
                       strokeLinecap="round"
                       strokeDasharray={circumference}
@@ -303,7 +334,8 @@ function TimerUi() {
                   type="button"
                   onClick={toggleTimer}
                   size="lg"
-                  className="min-w-32 rounded-full px-6 shadow-sm"
+                  data-active={isActive}
+                  className="timer-start-button min-w-32 rounded-full px-6 shadow-sm"
                 >
                   {isActive ? (
                     <Pause className="mr-2 h-4 w-4 fill-current" />
